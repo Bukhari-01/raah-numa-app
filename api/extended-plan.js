@@ -5,23 +5,25 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 export default async function handler(req, res) {
   const { answers, result } = req.body;
 
-  const prompt = `Tu ek expert career coach hai Pakistan ke liye.
+  const prompt = `You are an expert career coach for Pakistan.
 
-Is insaan ka profile:
+User profile:
 - Direction: ${result.primaryDirection}
 - Skill: ${answers.skill_desc}
 - Time: ${answers.time}
 - Goal: ${answers.goal}
 - Resources: ${Array.isArray(answers.resources) ? answers.resources.join(', ') : answers.resources}
 
-Iske liye 30-day action plan banao. Sirf JSON return karo, kuch aur mat likho:
+IMPORTANT: Reply in the EXACT same language and style the user used in their answers. If they wrote in Roman Urdu, reply in Roman Urdu. If English, reply in English. If Urdu script, reply in Urdu script. Match their tone exactly.
+
+Create a 30-day action plan. Return ONLY valid JSON, nothing else:
 {
   "plan": {
     "weeks": [
       {
-        "title": "Week ka naam",
+        "title": "Week title",
         "days": [
-          { "day": 1, "task": "Aaj kya karna hai - specific" },
+          { "day": 1, "task": "Specific actionable task" },
           { "day": 2, "task": "..." },
           { "day": 3, "task": "..." },
           { "day": 4, "task": "..." },
@@ -33,7 +35,7 @@ Iske liye 30-day action plan banao. Sirf JSON return karo, kuch aur mat likho:
     ]
   }
 }
-4 weeks total hone chahiye.`;
+4 weeks total.`;
 
   try {
     const completion = await groq.chat.completions.create({
