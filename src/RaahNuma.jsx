@@ -127,6 +127,14 @@ const QUESTIONS = [
       { i: "🌍", t: "Financial freedom — work from anywhere" },
     ],
   },
+  {
+    id: "anything_else",
+    label: "Anything Else?",
+    text: "Is there anything else you'd like to share that might help us give you better direction?",
+    hint: "Optional — but the more you share, the more personalized your report",
+    type: "text",
+    placeholder: "e.g. I have a disability that limits me, I live in a small city with no opportunities, my family doesn't support me, I've tried X and it didn't work because...",
+  },
 ];
 
 
@@ -174,36 +182,129 @@ const LOAD_MSGS = [
 ];
 
 // ─── PREMIUM UPSELL (monetization) ──────────────────────────
-function PremiumUpsell() {
+function PremiumUpsell({ answers, result }) {
+  const [state, setState] = useState('idle'); // idle | paying | verifying | done
+  const [txnId, setTxnId] = useState('');
+  const [plan, setPlan] = useState(null);
+  const [err, setErr] = useState('');
+
+  async function handlePaySubmit() {
+    if (txnId.trim().length < 5) {
+      setErr('Sahi Transaction ID daalo!');
+      return;
+    }
+    setErr('');
+    setState('verifying');
+    try {
+      const res = await fetch('/api/extended-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers, result, txnId }),
+      });
+      const data = await res.json();
+      setPlan(data.plan);
+      setState('done');
+    } catch {
+      setState('paying');
+      setErr('Kuch gadbad ho gayi, dobara try karo!');
+    }
+  }
+
+  // ── Plan show karo ──
+  if (state === 'done' && plan) {
+    return (
+      <div style={{ ...s.sec, border: '2px solid #c9a84c', background: '#fef9ee', marginTop: 12 }}>
+        <div style={s.secLabel}>📅 Tera 30-Day Plan</div>
+        {plan.weeks.map((week, wi) => (
+          <div key={wi} style={{ marginBottom: 16 }}>
+            <div style={{ fontWeight: 700, color: '#1a1a2e', marginBottom: 8 }}>
+              Week {wi + 1}: {week.title}
+            </div>
+            {week.days.map((day, di) => (
+              <div key={di} style={{ display: 'flex', gap: 10, padding: '7px 0', borderBottom: '1px solid #f0ede8', fontSize: 13, color: '#333' }}>
+                <span style={{ minWidth: 22, height: 22, background: '#1a1a2e', color: '#c9a84c', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+                  {day.day}
+                </span>
+                {day.task}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // ── Payment form ──
+  if (state === 'paying') {
+    return (
+      <div style={{ ...s.sec, border: '2px solid #c9a84c', background: '#fef9ee', marginTop: 12 }}>
+        <div style={s.secLabel}>💳 Payment Karo — PKR 299</div>
+
+        {/* Payment details */}
+        <div style={{ background: '#fff', border: '1px solid #c9a84c', borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
+          <div style={{ fontSize: 13, color: '#555', marginBottom: 4, fontWeight: 600 }}>EasyPaisa / JazzCash bhejo:</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#1a1a2e', letterSpacing: 1 }}>0306-0776033</div>
+          <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>Amount: PKR 299 · Name: Syed Hashir Ali</div>
+        </div>
+
+        {/* TXN input */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 8 }}>Transaction ID daalo:</div>
+          <input
+            type="text"
+            placeholder="e.g. TXN1234567890"
+            value={txnId}
+            onChange={e => { setTxnId(e.target.value); setErr(''); }}
+            style={{ width: '100%', padding: '12px 16px', border: '1.5px solid #e0dbd4', borderRadius: 10, fontSize: 14, fontFamily: 'inherit', background: '#f8f6f2', color: '#1a1a2e', outline: 'none', boxSizing: 'border-box' }}
+          />
+        </div>
+
+        {err && <div style={{ color: 'red', fontSize: 13, marginBottom: 10 }}>{err}</div>}
+
+        <button
+          onClick={handlePaySubmit}
+          style={{ background: '#c9a84c', color: '#fff', border: 'none', padding: '13px 28px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', width: '100%', fontSize: 15 }}
+        >
+          Plan Generate Karo →
+        </button>
+
+        <button
+          onClick={() => setState('idle')}
+          style={{ background: 'none', border: 'none', color: '#aaa', fontSize: 13, cursor: 'pointer', marginTop: 10, width: '100%' }}
+        >
+          ← Wapas jao
+        </button>
+      </div>
+    );
+  }
+
+  // ── Verifying ──
+  if (state === 'verifying') {
+    return (
+      <div style={{ ...s.sec, border: '2px solid #c9a84c', background: '#fef9ee', marginTop: 12, textAlign: 'center' }}>
+        <div style={{ fontSize: '2rem', marginBottom: 8 }}>⏳</div>
+        <div style={{ fontWeight: 700, color: '#1a1a2e' }}>Plan ban raha hai...</div>
+        <div style={{ fontSize: 13, color: '#888', marginTop: 6 }}>Bas 10-15 seconds!</div>
+      </div>
+    );
+  }
+
+  // ── Default button ──
   return (
-    <div style={{
-      ...s.sec, 
-      border: '2px solid #c9a84c', 
-      background: '#fef9ee',
-      marginTop: 12
-    }}>
+    <div style={{ ...s.sec, border: '2px solid #c9a84c', background: '#fef9ee', marginTop: 12 }}>
       <div style={s.secLabel}>💎 Get the Full 30‑Day Game Plan</div>
       <p style={{ fontSize: 14, color: '#555', margin: '8px 0 14px' }}>
-        Step‑by‑step blueprint, exact gig titles, outreach scripts. <br/>Get the PDF instantly.
+        Step‑by‑step daily blueprint — sirf tere liye banaya jayega. Personalized plan!
       </p>
       <button
-        onClick={() => alert('Purchase link coming soon! We\'ll email you.')}
-        style={{
-          background: '#c9a84c',
-          color: '#fff',
-          border: 'none',
-          padding: '12px 28px',
-          borderRadius: 8,
-          fontWeight: 600,
-          cursor: 'pointer'
-        }}
+        onClick={() => setState('paying')}
+        style={{ background: '#c9a84c', color: '#fff', border: 'none', padding: '12px 28px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 15 }}
       >
-        Get Extended Plan — PKR 499
+        Get Extended Plan — PKR 299
       </button>
     </div>
   );
 }
-
 // ─── AFFILIATE TOOLS (replace links with your own) ───────────
 const AFFILIATE_LINKS = {
   'Canva Pro': 'https://partner.canva.com/YOUR-AFF-ID',
@@ -244,6 +345,11 @@ export default function RaahNuma() {
   const [result, setResult] = useState(null);
   const [loadStep, setLoadStep] = useState(0);
   const [pastReports, setPastReports] = useState([]);
+// Gate state
+const [gateMode, setGateMode] = useState(null); // null | 'share' | 'pay'
+const [adTimer, setAdTimer]   = useState(0);
+const [payRef,  setPayRef]    = useState('');
+const [payDone, setPayDone]   = useState(false);
 
   const q = QUESTIONS[cur];
   const isLast = cur === QUESTIONS.length - 1;
@@ -257,6 +363,12 @@ export default function RaahNuma() {
       }
     });
   }, []);
+useEffect(() => {
+  if (gateMode === 'share' && adTimer > 0) {
+    const t = setTimeout(() => setAdTimer(a => a - 1), 1000);
+    return () => clearTimeout(t);
+  }
+}, [gateMode, adTimer]);
 
   async function loadPastReports(userId) {
     const { data } = await supabase
@@ -310,7 +422,7 @@ export default function RaahNuma() {
     const a = getAns(q.id);
     if (q.type === 'multi') return Array.isArray(a) && a.length > 0;
     if (q.type === 'single') return !!a;
-    if (q.type === 'text') return typeof a === 'string' && a.trim().length > 10;
+    if (q.type === 'text') return q.id === 'anything_else' ? true : typeof a === 'string' && a.trim().length > 10;
     return false;
   }
 
@@ -368,7 +480,7 @@ export default function RaahNuma() {
       if (parsed.error) throw new Error(parsed.error);
 
       setResult(parsed);
-      setScreen('result');
+      setScreen('gate');
       loadPastReports(session.user.id);
     } catch (e) {
       setScreen('quiz');
@@ -379,6 +491,22 @@ export default function RaahNuma() {
   function restart() {
     setCur(0); setAnswers({}); setTextVal(''); setResult(null); setError(''); setScreen('welcome');
   }
+function handleShare() {
+  setGateMode('share');
+  setAdTimer(10);
+  const text = `🧭 RaahNuma just gave me my income direction for Pakistan!\n\nGet yours free: https://raah-numa-app.vercel.app`;
+  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+function handlePaySubmit() {
+  if (payRef.trim().length < 5) { setError('Please enter a valid transaction ID.'); return; }
+  setPayDone(true);
+  setError('');
+}
+
+function unlockResult() {
+  setScreen('result');
+}
 
   // ── Render helpers ─────────────────────────────────────
   const pct = Math.round((cur + 1) / QUESTIONS.length * 100);
@@ -534,6 +662,141 @@ export default function RaahNuma() {
       </div>
     </div>
   );
+// ── SCREEN: Gate ──────────────────────────────────────
+if (screen === 'gate') return (
+  <div style={s.app}>
+    <div style={s.wrap}>
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <span style={s.badge}>🧭 RaahNuma AI</span>
+      </div>
+
+      {/* Blurred preview */}
+      <div style={{ position: 'relative', marginBottom: 24 }}>
+        <div style={{ filter: 'blur(7px)', pointerEvents: 'none', userSelect: 'none', ...s.card }}>
+          <div style={{ background: '#1a1a2e', borderRadius: 12, padding: '16px 20px', marginBottom: 12, textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#c9a84c' }}>{result?.primaryDirection}</div>
+          </div>
+          <div style={s.sec}><div style={s.secLabel}>🎯 Why This Fits You</div><div style={s.secText}>{result?.whyItFitsYou}</div></div>
+          <div style={s.sec}><div style={s.secLabel}>💰 Income Timeline</div><div style={s.secText}>{typeof result?.incomeTimeline === 'string' ? result.incomeTimeline : ''}</div></div>
+        </div>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(247,245,241,0.75)', borderRadius: 18 }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>🔒</div>
+          <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a1a2e', marginBottom: 4 }}>Your Report is Ready!</div>
+          <div style={{ color: '#888', fontSize: 13 }}>Unlock it below — takes 10 seconds</div>
+        </div>
+      </div>
+
+      {/* Gate options */}
+      {!gateMode && (
+        <div style={s.card}>
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a1a2e', marginBottom: 4 }}>Choose How to Unlock</div>
+            <div style={{ color: '#888', fontSize: 13 }}>One of these two options</div>
+          </div>
+
+          {/* Share option */}
+          <div
+            style={{ background: '#f0f7ff', border: '2px solid #b0d4f5', borderRadius: 14, padding: '20px', marginBottom: 12, cursor: 'pointer' }}
+            onClick={handleShare}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <span style={{ fontSize: 32 }}>📲</span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: '#1a1a2e', marginBottom: 2 }}>Share on WhatsApp — Free</div>
+                <div style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>Share RaahNuma with your contacts. Unlocks in 10 seconds.</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pay option */}
+          <div
+            style={{ background: '#fef9ee', border: '2px solid #c9a84c', borderRadius: 14, padding: '20px', cursor: 'pointer' }}
+            onClick={() => setGateMode('pay')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <span style={{ fontSize: 32 }}>💳</span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: '#8a6200', marginBottom: 2 }}>Pay PKR 100 — Instant Unlock</div>
+                <div style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>EasyPaisa or JazzCash. Enter your transaction ID.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share countdown */}
+      {gateMode === 'share' && (
+        <div style={{ ...s.card, textAlign: 'center' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📲</div>
+          <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a1a2e', marginBottom: 8 }}>WhatsApp should have opened!</div>
+          <p style={{ color: '#666', fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
+            {adTimer > 0 ? `Send the message to at least one contact. Unlocking in ${adTimer}s...` : 'Done! Your report is ready.'}
+          </p>
+          {adTimer > 0 ? (
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#f0ede8', border: '3px solid #c9a84c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 700, color: '#c9a84c', margin: '0 auto 16px' }}>
+              {adTimer}
+            </div>
+          ) : (
+            <button onClick={unlockResult} style={{ background: '#c9a84c', color: '#fff', border: 'none', padding: '14px 28px', borderRadius: 12, fontFamily: 'inherit', fontSize: 15, fontWeight: 600, cursor: 'pointer', width: '100%' }}>
+              🎉 Show My Direction Report →
+            </button>
+          )}
+          <button onClick={handleShare} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: 13, cursor: 'pointer', marginTop: 12 }}>
+            Didn't open? Tap to share again
+          </button>
+        </div>
+      )}
+
+      {/* Pay flow */}
+      {gateMode === 'pay' && (
+        <div style={s.card}>
+          {!payDone ? (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: '2rem', marginBottom: 8 }}>💳</div>
+                <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a1a2e' }}>Send PKR 100</div>
+              </div>
+              <div style={{ background: '#fef9ee', border: '1px solid #c9a84c', borderRadius: 12, padding: '16px 20px', marginBottom: 20 }}>
+                <div style={{ fontSize: 13, color: '#555', marginBottom: 6, fontWeight: 600 }}>EasyPaisa / JazzCash:</div>
+                <div style={{ fontSize: '1.3rem', fontWeight: 700, color: '#1a1a2e', letterSpacing: 1 }}>0306-0776033</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>Amount: PKR 100 · Name: RaahNuma</div>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 8 }}>Enter your Transaction ID:</div>
+                <input
+                  type="text"
+                  placeholder="e.g. TXN1234567890"
+                  value={payRef}
+                  onChange={e => { setPayRef(e.target.value); setError(''); }}
+                  style={{ width: '100%', padding: '12px 16px', border: '1.5px solid #e0dbd4', borderRadius: 10, fontSize: 14, fontFamily: 'inherit', background: '#f8f6f2', color: '#1a1a2e', outline: 'none' }}
+                />
+              </div>
+              {error && <div style={s.err}>{error}</div>}
+              <button onClick={handlePaySubmit} style={{ background: '#c9a84c', color: '#fff', border: 'none', padding: '14px 28px', borderRadius: 12, fontFamily: 'inherit', fontSize: 15, fontWeight: 600, cursor: 'pointer', width: '100%' }}>
+                Submit Payment →
+              </button>
+              <button onClick={() => setGateMode(null)} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: 13, cursor: 'pointer', marginTop: 12, width: '100%', textAlign: 'center' }}>
+                ← Go back
+              </button>
+            </>
+          ) : (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>✅</div>
+              <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#1a1a2e', marginBottom: 8 }}>Payment Submitted!</div>
+              <p style={{ color: '#666', fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
+                We are verifying your PKR 100 payment. Takes just a few minutes.<br /><br />
+                <strong>Once verified, tap below to see your report.</strong>
+              </p>
+              <button onClick={unlockResult} style={{ background: '#1a1a2e', color: '#fff', border: 'none', padding: '14px 28px', borderRadius: 12, fontFamily: 'inherit', fontSize: 15, fontWeight: 600, cursor: 'pointer', width: '100%' }}>
+                I've Paid — Show My Report →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+);
 
   // ── SCREEN: Result ────────────────────────────────────
   if (screen === 'result' && result) return (
@@ -604,7 +867,7 @@ export default function RaahNuma() {
         <div style={s.motive}>"{result.motivationalNote}"</div>
 
         {/* MONETISATION */}
-        <PremiumUpsell />
+        <PremiumUpsell answers={answers} result={result} />
 
         <button style={s.btnAgain} onClick={restart}>↩ Start Over</button>
       </div>
