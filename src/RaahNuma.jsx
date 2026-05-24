@@ -385,7 +385,7 @@ useEffect(() => {
     if (authMode === 'signup') {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) setAuthError(error.message);
-      else setAuthError('Account created! You can now log in.');
+      else setAuthError('Account created! verify email to log in.');
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setAuthError(error.message);
